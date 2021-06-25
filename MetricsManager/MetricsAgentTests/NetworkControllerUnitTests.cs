@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using AutoMapper;
 using MetricsAgent.Controllers;
 using MetricsAgent.Models;
 using MetricsAgent.Repositories;
@@ -24,7 +25,8 @@ namespace MetricsAgentTests
         {
             _mockRepository = new Mock<INetworkMetricsRepository>();
             var mockLogger = new Mock<ILogger<NetworkMetricsController>>();
-            _controller = new NetworkMetricsController(_mockRepository.Object, mockLogger.Object);
+            var mockMapper = new Mock<IMapper>();
+            _controller = new NetworkMetricsController(_mockRepository.Object, mockLogger.Object, mockMapper.Object);
         }
 
         [Fact]

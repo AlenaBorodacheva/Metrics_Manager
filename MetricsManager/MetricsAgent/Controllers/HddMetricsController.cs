@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using MetricsAgent.DTO;
 using MetricsAgent.Models;
 using MetricsAgent.Repositories;
@@ -20,22 +21,20 @@ namespace MetricsAgent.Controllers
     {
         private readonly ILogger<HddMetricsController> _logger;
         private readonly IHddMetricsRepository _repository;
+        private readonly IMapper _mapper;
 
-        public HddMetricsController(IHddMetricsRepository repository, ILogger<HddMetricsController> logger)
+        public HddMetricsController(IHddMetricsRepository repository, ILogger<HddMetricsController> logger, IMapper mapper)
         {
             _logger = logger;
             _logger.LogDebug(1, "HddMetricsController created");
             _repository = repository;
+            _mapper = mapper;
         }
 
         [HttpPost("create")]
         public IActionResult Create([FromBody] HddMetricCreateRequest request)
         {
-            _repository.Create(new HddMetric
-            {
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Create(_mapper.Map<HddMetric>(request));
 
             _logger.LogTrace(1, $"Query Create Metric with params: Value={request.Value}, Time={request.Time}");
 
@@ -45,12 +44,7 @@ namespace MetricsAgent.Controllers
         [HttpPut("update")]
         public IActionResult Update([FromBody] HddMetricUpdateRequest request)
         {
-            _repository.Update(new HddMetric
-            {
-                Id = request.Id,
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Update(_mapper.Map<HddMetric>(request));
 
             _logger.LogTrace(1, $"Query Update Metric with params: ID={request.Id}, Value={request.Value}, Time={request.Time}");
 
@@ -69,11 +63,20 @@ namespace MetricsAgent.Controllers
 
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new HddMetricDto { Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time), Value = metric.Value, Id = metric.Id });
+                response.Metrics.Add(_mapper.Map<HddMetricDto>(metric));
             }
 
             _logger.LogTrace(1, $"Query GetAll Metrics without params");
 
+            return Ok(response);
+        }
+
+        [HttpGet("getmetric/{id}")]
+        public IActionResult GetById([FromRoute] int id)
+        {
+            _logger.LogTrace(1, $"Query GetByID Metrics with params: ID={id}");
+            HddMetric metric = _repository.GetById(id);
+            var response = _mapper.Map<HddMetricDto>(metric);
             return Ok(response);
         }
 
@@ -104,12 +107,7 @@ namespace MetricsAgent.Controllers
             };
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new HddMetricDto
-                {
-                    Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time),
-                    Value = metric.Value,
-                    Id = metric.Id
-                });
+                response.Metrics.Add(_mapper.Map<HddMetricDto>(metric));
             }
 
             return Ok(response);

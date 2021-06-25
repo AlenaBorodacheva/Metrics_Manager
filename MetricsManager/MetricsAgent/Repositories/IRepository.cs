@@ -16,5 +16,7 @@ namespace MetricsAgent.Repositories
         void Delete(int id);
 
         IList<T> GetByTimePeriod(long fromTime, long toTime);
+
+        T GetById(int id);
     }
 }

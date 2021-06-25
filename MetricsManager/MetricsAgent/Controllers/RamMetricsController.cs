@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using MetricsAgent.DTO;
 using MetricsAgent.Models;
 using MetricsAgent.Repositories;
@@ -20,22 +21,20 @@ namespace MetricsAgent.Controllers
     {
         private readonly ILogger<RamMetricsController> _logger;
         private readonly IRamMetricsRepository _repository;
+        private readonly IMapper _mapper;
 
-        public RamMetricsController(IRamMetricsRepository repository, ILogger<RamMetricsController> logger)
+        public RamMetricsController(IRamMetricsRepository repository, ILogger<RamMetricsController> logger, IMapper mapper)
         {
             _logger = logger;
             _logger.LogDebug(1, "RamMetricsController created");
             _repository = repository;
+            _mapper = mapper;
         }
 
         [HttpPost("create")]
         public IActionResult Create([FromBody] RamMetricCreateRequest request)
         {
-            _repository.Create(new RamMetric
-            {
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Create(_mapper.Map<RamMetric>(request));
 
             _logger.LogTrace(1, $"Query Create Metric with params: Value={request.Value}, Time={request.Time}");
 
@@ -45,12 +44,7 @@ namespace MetricsAgent.Controllers
         [HttpPut("update")]
         public IActionResult Update([FromBody] RamMetricUpdateRequest request)
         {
-            _repository.Update(new RamMetric
-            {
-                Id = request.Id,
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Update(_mapper.Map<RamMetric>(request));
 
             _logger.LogTrace(1, $"Query Update Metric with params: ID={request.Id}, Value={request.Value}, Time={request.Time}");
 
@@ -69,7 +63,7 @@ namespace MetricsAgent.Controllers
 
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new RamMetricDto { Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time), Value = metric.Value, Id = metric.Id });
+                response.Metrics.Add(_mapper.Map<RamMetricDto>(metric));
             }
 
             _logger.LogTrace(1, $"Query GetAll Metrics without params");
@@ -83,6 +77,15 @@ namespace MetricsAgent.Controllers
             _repository.Delete(request.Id);
             _logger.LogTrace(1, $"Query Delete Metric with params: ID={request.Id}");
             return Ok();
+        }
+
+        [HttpGet("getmetric/{id}")]
+        public IActionResult GetById([FromRoute] int id)
+        {
+            _logger.LogTrace(1, $"Query GetByID Metrics with params: ID={id}");
+            RamMetric metric = _repository.GetById(id);
+            var response = _mapper.Map<RamMetricDto>(metric);
+            return Ok(response);
         }
 
 
@@ -104,12 +107,7 @@ namespace MetricsAgent.Controllers
             };
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new RamMetricDto
-                {
-                    Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time),
-                    Value = metric.Value,
-                    Id = metric.Id
-                });
+                response.Metrics.Add(_mapper.Map<RamMetricDto>(metric));
             }
 
             return Ok(response);

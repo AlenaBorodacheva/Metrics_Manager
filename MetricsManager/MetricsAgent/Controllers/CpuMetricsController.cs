@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using MetricsAgent.DTO;
 using MetricsAgent.Models;
 using MetricsAgent.Repositories;
@@ -20,22 +21,20 @@ namespace MetricsAgent.Controllers
     {
         private readonly ILogger<CpuMetricsController> _logger;
         private readonly ICpuMetricsRepository _repository;
+        private readonly IMapper _mapper;
 
-        public CpuMetricsController(ICpuMetricsRepository repository, ILogger<CpuMetricsController> logger)
+        public CpuMetricsController(ICpuMetricsRepository repository, ILogger<CpuMetricsController> logger, IMapper mapper)
         {
             _logger = logger;
             _logger.LogDebug(1, "CpuMetricsController created");
             _repository = repository;
+            _mapper = mapper;
         }
 
         [HttpPost("create")]
         public IActionResult Create([FromBody] CpuMetricCreateRequest request)
         {
-            _repository.Create(new CpuMetric
-            {
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Create(_mapper.Map<CpuMetric>(request));
 
             _logger.LogTrace(1, $"Query Create Metric with params: Value={request.Value}, Time={request.Time}");
 
@@ -45,12 +44,7 @@ namespace MetricsAgent.Controllers
         [HttpPut("update")]
         public IActionResult Update([FromBody] CpuMetricUpdateRequest request)
         {
-            _repository.Update(new CpuMetric
-            {
-                Id = request.Id,
-                Time = request.Time.ToUnixTimeSeconds(),
-                Value = request.Value
-            });
+            _repository.Update(_mapper.Map<CpuMetric>(request));
 
             _logger.LogTrace(1, $"Query Update Metric with params: ID={request.Id}, Value={request.Value}, Time={request.Time}");
 
@@ -69,7 +63,7 @@ namespace MetricsAgent.Controllers
 
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new CpuMetricDto { Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time), Value = metric.Value, Id = metric.Id });
+                response.Metrics.Add(_mapper.Map<CpuMetricDto>(metric));
             }
 
             _logger.LogTrace(1, $"Query GetAll Metrics without params");
@@ -85,6 +79,14 @@ namespace MetricsAgent.Controllers
             return Ok();
         }
 
+        [HttpGet("getmetric/{id}")]
+        public IActionResult GetById([FromRoute] int id)
+        {
+            _logger.LogTrace(1, $"Query GetByID Metrics with params: ID={id}");
+            CpuMetric metric = _repository.GetById(id);
+            var response = _mapper.Map<CpuMetricDto>(metric);
+            return Ok(response);
+        }
 
         /// <summary>
         /// Возвращает метрики CPU за указанный промежуток времени с указанным перцентилем
@@ -118,12 +120,7 @@ namespace MetricsAgent.Controllers
             };
             foreach (var metric in metrics)
             {
-                response.Metrics.Add(new CpuMetricDto
-                {
-                    Time = DateTimeOffset.FromUnixTimeSeconds(metric.Time),
-                    Value = metric.Value,
-                    Id = metric.Id
-                });
+                response.Metrics.Add(_mapper.Map<CpuMetricDto>(metric));
             }
 
             return Ok(response);

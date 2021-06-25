@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using MetricsAgent.Models;
 
 namespace MetricsAgent.Repositories
@@ -22,88 +23,65 @@ namespace MetricsAgent.Repositories
 
         public void Create(NetworkMetric item)
         {
-            using var cmd = new SQLiteCommand(_connection);
-
-            cmd.CommandText = "INSERT INTO networkmetrics(value, time) VALUES(@value, @time)";
-
-            cmd.Parameters.AddWithValue("@value", item.Value);
-            cmd.Parameters.AddWithValue("@time", item.Time);
-
-            cmd.Prepare();
-            cmd.ExecuteNonQuery();
+            using (var connection = new SQLiteConnection(_connection))
+            {
+                connection.Execute("INSERT INTO networkmetrics(value, time) VALUES(@value, @time)",
+                    new
+                    {
+                        value = item.Value,
+                        time = item.Time
+                    });
+            }
         }
 
-        public void Delete(int id)
+        public void Delete(int metricId)
         {
-            using var cmd = new SQLiteCommand(_connection);
-
-            cmd.CommandText = "DELETE FROM networkmetrics WHERE id=@id";
-
-            cmd.Parameters.AddWithValue("@id", id);
-
-            cmd.Prepare();
-            cmd.ExecuteNonQuery();
+            using (var connection = new SQLiteConnection(_connection))
+            {
+                connection.Execute("DELETE FROM networkmetrics WHERE id=@id", new { id = metricId });
+            }
         }
 
         public IList<NetworkMetric> GetAll()
         {
-            using var cmd = new SQLiteCommand(_connection);
-
-            cmd.CommandText = "SELECT * FROM networkmetrics";
-
-            var returnList = new List<NetworkMetric>();
-
-            using (SQLiteDataReader reader = cmd.ExecuteReader())
+            using (var connection = new SQLiteConnection(_connection))
             {
-                while (reader.Read())
-                {
-                    returnList.Add(new NetworkMetric
-                    {
-                        Id = reader.GetInt32(0),
-                        Value = reader.GetInt32(1),
-                        Time = reader.GetInt64(2)
-                    });
-                }
+                return connection.Query<NetworkMetric>("SELECT id, time, value FROM networkmetrics").ToList();
             }
-
-            return returnList;
         }
         
-        public IList<NetworkMetric> GetByTimePeriod(long fromTime, long toTime)
+        public IList<NetworkMetric> GetByTimePeriod(long getFromTime, long getToTime)
         {
-            using var cmd = new SQLiteCommand(_connection);
-
-            cmd.CommandText = "SELECT * FROM networkmetrics WHERE (time>=@fromTime) AND (time<=@toTime)";
-            cmd.Parameters.AddWithValue("@fromTime", fromTime);
-            cmd.Parameters.AddWithValue("@toTime", toTime);
-
-            var returnList = new List<NetworkMetric>();
-            using (SQLiteDataReader reader = cmd.ExecuteReader())
+            using (var connection = new SQLiteConnection(_connection))
             {
-                while (reader.Read())
+                return connection.Query<NetworkMetric>("SELECT * FROM networkmetrics WHERE (time>=@fromTime) AND (time<=@toTime)",
+                    new { fromTime = getFromTime, toTime = getToTime }).ToList();
+            }
+        }
+
+        public NetworkMetric GetById(int metricId)
+        {
+            using (var connection = new SQLiteConnection(_connection))
+            {
+                try
                 {
-                    returnList.Add(new NetworkMetric
-                    {
-                        Id = reader.GetInt32(0),
-                        Value = reader.GetInt32(1),
-                        Time = (reader.GetInt64(2))
-                    });
+                    return connection.QuerySingle<NetworkMetric>("SELECT * FROM networkmetrics WHERE id = @id",
+                        new { id = metricId });
+                }
+                catch (Exception)
+                {
+                    return null;
                 }
             }
-            return returnList;
         }
 
         public void Update(NetworkMetric item)
         {
-            using var cmd = new SQLiteCommand(_connection);
-
-            cmd.CommandText = "UPDATE networkmetrics SET value = @value, time = @time WHERE id=@id;";
-            cmd.Parameters.AddWithValue("@id", item.Id);
-            cmd.Parameters.AddWithValue("@value", item.Value);
-            cmd.Parameters.AddWithValue("@time", item.Time);
-            cmd.Prepare();
-
-            cmd.ExecuteNonQuery();
+            using (var connection = new SQLiteConnection(_connection))
+            {
+                connection.Execute("UPDATE networkmetrics SET value = @value, time = @time WHERE id=@id;",
+                    new { value = item.Value, time = item.Time, id = item.Id });
+            }
         }
     }
 }
