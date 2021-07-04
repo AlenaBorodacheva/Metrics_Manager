@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using MetricsAgent.DTO;
 using MetricsAgent.Models;
@@ -18,12 +15,7 @@ namespace MetricsAgent.Settings
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<CpuMetric, CpuMetricDto>().ForMember(tm => tm.Time,
                 time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-            
-            CreateMap<CpuMetricUpdateRequest, CpuMetric>().ForMember(dbModel => dbModel.Time,
-                o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
-            CreateMap<CpuMetric, CpuMetricUpdateRequest>().ForMember(tm => tm.Time,
-                time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-          
+         
             CreateMap<CpuMetricCreateRequest, CpuMetric>().ForMember(dbModel => dbModel.Time,
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<CpuMetric, CpuMetricCreateRequest>().ForMember(tm => tm.Time,
@@ -34,12 +26,7 @@ namespace MetricsAgent.Settings
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<DotNetMetric, DotNetMetricDto>().ForMember(tm => tm.Time,
                 time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-
-            CreateMap<DotNetMetricUpdateRequest, DotNetMetric>().ForMember(dbModel => dbModel.Time,
-                o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
-            CreateMap<DotNetMetric, DotNetMetricUpdateRequest>().ForMember(tm => tm.Time,
-                time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-           
+            
             CreateMap<DotNetMetricCreateRequest, DotNetMetric>().ForMember(dbModel => dbModel.Time,
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<DotNetMetric, DotNetMetricCreateRequest>().ForMember(tm => tm.Time,
@@ -49,11 +36,6 @@ namespace MetricsAgent.Settings
             CreateMap<HddMetricDto, HddMetric>().ForMember(dbModel => dbModel.Time,
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<HddMetric, HddMetricDto>().ForMember(tm => tm.Time,
-                time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-
-            CreateMap<HddMetricUpdateRequest, HddMetric>().ForMember(dbModel => dbModel.Time,
-                o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
-            CreateMap<HddMetric, HddMetricUpdateRequest>().ForMember(tm => tm.Time,
                 time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
 
             CreateMap<HddMetricCreateRequest, HddMetric>().ForMember(dbModel => dbModel.Time,
@@ -67,11 +49,6 @@ namespace MetricsAgent.Settings
             CreateMap<NetworkMetric, NetworkMetricDto>().ForMember(tm => tm.Time,
                 time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
 
-            CreateMap<NetworkMetricUpdateRequest, NetworkMetric>().ForMember(dbModel => dbModel.Time,
-                o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
-            CreateMap<NetworkMetric, NetworkMetricUpdateRequest>().ForMember(tm => tm.Time,
-                time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-
             CreateMap<NetworkMetricCreateRequest, NetworkMetric>().ForMember(dbModel => dbModel.Time,
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<NetworkMetric, NetworkMetricCreateRequest>().ForMember(tm => tm.Time,
@@ -82,12 +59,7 @@ namespace MetricsAgent.Settings
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<RamMetric, RamMetricDto>().ForMember(tm => tm.Time,
                 time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-
-            CreateMap<RamMetricUpdateRequest, RamMetric>().ForMember(dbModel => dbModel.Time,
-                o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
-            CreateMap<RamMetric, RamMetricUpdateRequest>().ForMember(tm => tm.Time,
-                time => time.MapFrom(t => DateTimeOffset.FromUnixTimeSeconds(t.Time)));
-
+            
             CreateMap<RamMetricCreateRequest, RamMetric>().ForMember(dbModel => dbModel.Time,
                 o => o.MapFrom(t => t.Time.ToUnixTimeSeconds()));
             CreateMap<RamMetric, RamMetricCreateRequest>().ForMember(tm => tm.Time,

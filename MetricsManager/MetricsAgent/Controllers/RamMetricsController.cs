@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using MetricsAgent.DTO;
 using MetricsAgent.Models;
@@ -40,17 +38,7 @@ namespace MetricsAgent.Controllers
 
             return Ok();
         }
-
-        [HttpPut("update")]
-        public IActionResult Update([FromBody] RamMetricUpdateRequest request)
-        {
-            _repository.Update(_mapper.Map<RamMetric>(request));
-
-            _logger.LogTrace(1, $"Query Update Metric with params: ID={request.Id}, Value={request.Value}, Time={request.Time}");
-
-            return Ok();
-        }
-
+        
         [HttpGet("all")]
         public IActionResult GetAll()
         {
@@ -70,25 +58,7 @@ namespace MetricsAgent.Controllers
 
             return Ok(response);
         }
-
-        [HttpDelete("delete")]
-        public IActionResult Delete([FromBody] RamMetricDeleteRequest request)
-        {
-            _repository.Delete(request.Id);
-            _logger.LogTrace(1, $"Query Delete Metric with params: ID={request.Id}");
-            return Ok();
-        }
-
-        [HttpGet("getmetric/{id}")]
-        public IActionResult GetById([FromRoute] int id)
-        {
-            _logger.LogTrace(1, $"Query GetByID Metrics with params: ID={id}");
-            RamMetric metric = _repository.GetById(id);
-            var response = _mapper.Map<RamMetricDto>(metric);
-            return Ok(response);
-        }
-
-
+        
         /// <summary>
         /// Возвращает метрики Ram за указанный промежуток времени
         /// </summary>
@@ -125,7 +95,38 @@ namespace MetricsAgent.Controllers
             [FromRoute] Percentile percentile)
         {
             _logger.LogTrace($"Query GetRamMetrics with params: FromTime={fromTime}, ToTime={toTime}, Percentile={percentile}");
-            return Ok();
+
+            var rawMetrics = _repository.GetByTimePeriod(fromTime.ToUnixTimeSeconds(), toTime.ToUnixTimeSeconds())
+                .OrderBy(metrics => metrics.Value);
+
+            if (!rawMetrics.Any())
+            {
+                return null;
+            }
+
+            int index = 0;
+            switch (percentile)
+            {
+                case Percentile.Median:
+                    index = (int)(rawMetrics.Count() / 2);
+                    break;
+                case Percentile.P75:
+                    index = (int)(rawMetrics.Count() * 0.75);
+                    break;
+                case Percentile.P90:
+                    index = (int)(rawMetrics.Count() * 0.90);
+                    break;
+                case Percentile.P95:
+                    index = (int)(rawMetrics.Count() * 0.95);
+                    break;
+                case Percentile.P99:
+                    index = (int)(rawMetrics.Count() * 0.99);
+                    break;
+            }
+
+            var response = _mapper.Map<RamMetricDto>(rawMetrics.ElementAt(index));
+
+            return Ok(response);
         }
     }
 }

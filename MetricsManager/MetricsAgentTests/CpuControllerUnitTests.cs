@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using AutoFixture;
 using AutoMapper;
 using MetricsAgent.Controllers;
 using MetricsAgent.Models;
@@ -20,6 +21,7 @@ namespace MetricsAgentTests
         private readonly DateTimeOffset _toTime = new(new(2021, 06, 01)); 
         private readonly Percentile _percentile = Percentile.P99;
         private readonly Mock<ICpuMetricsRepository> _mockRepository;
+        private readonly List<CpuMetric> _initialData;
 
         public CpuControllerUnitTests()
         {
@@ -27,6 +29,7 @@ namespace MetricsAgentTests
             var mockLogger = new Mock<ILogger<CpuMetricsController>>();
             var mockMapper = new Mock<IMapper>();
             _controller = new CpuMetricsController(_mockRepository.Object, mockLogger.Object, mockMapper.Object);
+            _initialData = new Fixture().Create<List<CpuMetric>>();
         }
 
         [Fact]
@@ -42,29 +45,17 @@ namespace MetricsAgentTests
             // проверяем заглушку на то, что пока работал контроллер
             // действительно вызвался метод Create репозитория с нужным типом объекта в параметре
             _mockRepository.Verify(repository => repository.Create(It.IsAny<CpuMetric>()), Times.AtMostOnce());
-        }
-        [Fact]
-        public void Update_ShouldCall_Update_From_Repository()
-        {
-            _mockRepository.Setup(repository => repository.Update(It.IsAny<CpuMetric>())).Verifiable();
-            var result = _controller.Update(new CpuMetricUpdateRequest { Id = 3, Time = new(new(2020, 02, 04)), Value = 50 });
-            _mockRepository.Verify(repository => repository.Update(It.IsAny<CpuMetric>()), Times.AtMostOnce());
-        }
 
-        [Fact]
-        public void Delete_ShouldCall_Delete_From_Repository()
-        {
-            _mockRepository.Setup(repository => repository.Delete(It.IsAny<int>())).Verifiable();
-            var result = _controller.Delete(new CpuMetricDeleteRequest { Id = 3 });
-            _mockRepository.Verify(repository => repository.Delete(It.IsAny<int>()), Times.AtMostOnce());
+            _ = Assert.IsAssignableFrom<IActionResult>(result);
         }
-
+       
         [Fact]
         public void GetAll_ShouldCall_GetAll_From_Repository()
         {
             _mockRepository.Setup(repository => repository.GetAll()).Returns(new List<CpuMetric>()).Verifiable();
             var result = _controller.GetAll();
             _mockRepository.Verify(repository => repository.GetAll(), Times.AtLeastOnce());
+            _ = Assert.IsAssignableFrom<IActionResult>(result);
         }
 
         [Fact]
@@ -73,16 +64,22 @@ namespace MetricsAgentTests
             long startTime = _fromTime.ToUnixTimeSeconds();
             long endTime = _toTime.ToUnixTimeSeconds();
 
-            _mockRepository.Setup(repository => repository.GetByTimePeriod(startTime, endTime)).Returns(new List<CpuMetric>()).Verifiable();
+            _mockRepository.Setup(repository => repository.GetByTimePeriod(startTime, endTime)).Returns(_initialData).Verifiable();
             var result = _controller.GetMetrics(_fromTime, _toTime);
             _mockRepository.Verify(repository => repository.GetByTimePeriod(startTime, endTime), Times.AtMostOnce());
+            _ = Assert.IsAssignableFrom<IActionResult>(result);
         }
 
         [Fact]
         public void GetMetricsByPercentile_ReturnsOk()
         {
-            var getMetricsByPercentileResult = _controller.GetMetricsByPercentile(_fromTime, _toTime, _percentile);
-            _ = Assert.IsAssignableFrom<IActionResult>(getMetricsByPercentileResult);
+            long startTime = _fromTime.ToUnixTimeSeconds();
+            long endTime = _toTime.ToUnixTimeSeconds();
+
+            _mockRepository.Setup(repository => repository.GetByTimePeriod(startTime, endTime)).Returns(_initialData).Verifiable();
+            var result = _controller.GetMetricsByPercentile(_fromTime, _toTime, _percentile);
+            _mockRepository.Verify(repository => repository.GetByTimePeriod(startTime, endTime), Times.AtMostOnce());
+            _ = Assert.IsAssignableFrom<IActionResult>(result);
         }
     }
 }

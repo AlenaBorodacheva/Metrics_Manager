@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MetricsCommon
+﻿namespace MetricsCommon
 {
     public enum Percentile
     {

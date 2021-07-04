@@ -1,25 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MetricsAgent.Requests
 {
     public class NetworkMetricCreateRequest
     {
-        public DateTimeOffset Time { get; set; }
+        private DateTimeOffset time { get; set; }
         public int Value { get; set; }
-    }
-
-    public class NetworkMetricUpdateRequest
-    {
-        public int Id { get; set; }
-        public DateTimeOffset Time { get; set; }
-        public int Value { get; set; }
-    }
-
-    public class NetworkMetricDeleteRequest
-    {
-        public int Id { get; set; }
+        public DateTimeOffset Time
+        {
+            get => time;
+            set => time = new DateTimeOffset(value.DateTime, TimeSpan.FromHours(0));
+        }
     }
 }

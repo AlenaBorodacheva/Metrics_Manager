@@ -1,21 +1,20 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
-using Dapper;
+using FluentMigrator.Runner;
+using MetricsAgent.Jobs;
 using MetricsAgent.Repositories;
 using MetricsAgent.Settings;
+using MetricsCommon;
+using MetricsCommon.SQL_Settings;
 using Microsoft.OpenApi.Models;
+using Quartz;
+using Quartz.Impl;
+using Quartz.Spi;
 
 namespace MetricsAgent
 {
@@ -32,60 +31,65 @@ namespace MetricsAgent
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            ConfigureSqlLiteConnection(services);
+
+            services.AddSingleton<ISqlSettings, SqlSettings>();
+            services.AddFluentMigratorCore().ConfigureRunner(rb => rb
+                // добавляем поддержку SQLite
+                .AddSQLite()
+                // устанавливаем строку подключения
+                .WithGlobalConnectionString(SqlSettings.ConnectionString)
+                // подсказываем где искать классы с миграциями
+                .ScanIn(typeof(Startup).Assembly).For.Migrations()).AddLogging(lb => lb
+                .AddFluentMigratorConsole());
+            services.AddSingleton(new SQLiteConnection(SqlSettings.ConnectionString));
+
+            // Инициализация репозиториев
             services.AddScoped<ICpuMetricsRepository, CpuMetricsRepository>();
             services.AddScoped<IDotNetMetricsRepository, DotNetMetricsRepository>();
             services.AddScoped<IHddMetricsRepository, HddMetricsRepository>();
             services.AddScoped<INetworkMetricsRepository, NetworkMetricsRepository>();
             services.AddScoped<IRamMetricsRepository, RamMetricsRepository>();
+
+            // Создание фоновых задач по снятию метрик
+            services.AddHostedService<QuartzHostedService>();
+            services.AddSingleton<IJobFactory, SingletonJobFactory>();
+            services.AddSingleton<ISchedulerFactory, StdSchedulerFactory>();
+
+            services.AddSingleton<CpuMetricJob>();
+            services.AddSingleton(new JobSchedule(
+                jobType: typeof(CpuMetricJob),
+                cronExpression: "0/5 * * * * ?")); // запускать каждые 5 секунд
+            services.AddSingleton<DotNetMetricJob>();
+            services.AddSingleton(new JobSchedule(
+                jobType: typeof(DotNetMetricJob),
+                cronExpression: "0/5 * * * * ?"));
+            services.AddSingleton<HddMetricJob>();
+            services.AddSingleton(new JobSchedule(
+                jobType: typeof(HddMetricJob),
+                cronExpression: "0/5 * * * * ?"));
+            services.AddSingleton<NetworkMetricJob>();
+            services.AddSingleton(new JobSchedule(
+                jobType: typeof(NetworkMetricJob),
+                cronExpression: "0/5 * * * * ?"));
+            services.AddSingleton<RamMetricJob>();
+            services.AddSingleton(new JobSchedule(
+                jobType: typeof(RamMetricJob),
+                cronExpression: "0/5 * * * * ?"));
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "MetricsAgent", Version = "v1" });
             });
+
             var mapperConfiguration = new MapperConfiguration(mp => mp.AddProfile(new MapperProfile()));
             var mapper = mapperConfiguration.CreateMapper();
             services.AddSingleton(mapper);
         }
 
-        private void ConfigureSqlLiteConnection(IServiceCollection services)
-        {
-            string connectionString = "Data Source=:memory:";
-            var connection = new SQLiteConnection(connectionString);
-            connection.Open();
-            PrepareSchema(connection);
-            services.AddSingleton(connection);
-        }
-
-        private void PrepareSchema(SQLiteConnection connection)
-        {
-            // Создаем таблицу с метриками CPU
-            using (var createTableConnection = new SQLiteConnection(connection))
-            {
-                // Создаем таблицус метриками CPU
-                createTableConnection.Execute("DROP TABLE IF EXISTS cpumetrics");
-                createTableConnection.Execute("CREATE TABLE cpumetrics(id INTEGER PRIMARY KEY, value INT, time INT)");
-
-                // Создаем таблицу с метриками .Net
-                createTableConnection.Execute("DROP TABLE IF EXISTS dotnetmetrics");
-                createTableConnection.Execute("CREATE TABLE dotnetmetrics(id INTEGER PRIMARY KEY, value INT, time INT)");
-
-                // Создаем таблицу с метриками HDD
-                createTableConnection.Execute("DROP TABLE IF EXISTS hddmetrics");
-                createTableConnection.Execute("CREATE TABLE hddmetrics(id INTEGER PRIMARY KEY, value INT, time INT)");
-
-                // Создаем таблицу с метриками Network
-                createTableConnection.Execute("DROP TABLE IF EXISTS networkmetrics");
-                createTableConnection.Execute("CREATE TABLE networkmetrics(id INTEGER PRIMARY KEY, value INT, time INT)");
-
-                // Создаем таблицу с метриками RAM
-                createTableConnection.Execute("DROP TABLE IF EXISTS rammetrics");
-                createTableConnection.Execute("CREATE TABLE rammetrics(id INTEGER PRIMARY KEY, value INT, time INT)");
-            }
-        }
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IMigrationRunner migrationRunner)
         {
+            migrationRunner.MigrateUp();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -94,11 +98,8 @@ namespace MetricsAgent
             }
 
             app.UseHttpsRedirection();
-
             app.UseRouting();
-
             app.UseAuthorization();
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
