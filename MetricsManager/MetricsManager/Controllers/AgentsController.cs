@@ -1,21 +1,28 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
+using MetricsManager.Models;
+using MetricsManager.Repositories.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace MetricsManager.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/agents")]
     [ApiController]
     public class AgentsController : ControllerBase
     {
-        private readonly List<AgentInfo> _registeredAgents;
+        private readonly IAgentsRepository _agentsRepository;
+        private readonly ILogger<AgentsController> _logger;
 
-        public AgentsController(List<AgentInfo> registeredAgents)
+        public AgentsController(IAgentsRepository agentsRepository, ILogger<AgentsController> logger)
         {
-            _registeredAgents = registeredAgents;
+            _agentsRepository = agentsRepository;
+            _logger = logger;
+            _logger.LogDebug(1, "AgentController created");
+        }
+
+
+        private bool IsAgentRegistered(AgentInfo agent)
+        {
+            return _agentsRepository.FindUrl(agent.AgentUrl) != null;
         }
 
         /// <summary>
@@ -25,26 +32,26 @@ namespace MetricsManager.Controllers
         [HttpPost("register")]
         public IActionResult RegisterAgent([FromBody] AgentInfo agentInfo)
         {
-            return Ok();
+            _logger.LogTrace($"Agent registered with params: AgentID={agentInfo.AgentId}, AgentAddress={agentInfo.AgentUrl}");
+
+            if (!IsAgentRegistered(agentInfo))
+            {
+                _agentsRepository.Create(agentInfo);
+                return Ok();
+            }
+
+            return BadRequest("Агент с таким URL уже зарегистрирован!");
         }
 
         /// <summary>
-        /// Активирует агента по его ID
-        /// </summary>
-        /// <param name="agentId">ID агента</param>
-        [HttpPut("enable/{agentId}")]
-        public IActionResult EnableAgentById([FromRoute] int agentId)
+        /// Удаляет агента по указанному ID
+        /// </summary> 
+        [HttpDelete("unregister/{agentId}")]
+        public IActionResult DeleteAgent([FromRoute] int agentId)
         {
-            return Ok();
-        }
+            _logger.LogTrace($"Agent unregistered: AgentID={agentId}");
 
-        /// <summary>
-        /// Деактивирует агента по его ID
-        /// </summary>
-        /// <param name="agentId">ID агента</param>
-        [HttpPut("disable/{agentId}")]
-        public IActionResult DisableAgentById([FromRoute] int agentId)
-        {
+            _agentsRepository.Delete(agentId);
             return Ok();
         }
 
@@ -54,7 +61,22 @@ namespace MetricsManager.Controllers
         [HttpGet("read")]
         public IActionResult ListOfRegisteredObjects()
         {
-            return Ok();
+            _logger.LogTrace("Query for all registered agents");
+
+            var response = _agentsRepository.GetAll();
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Возвращает информацию об агенте по его Id
+        /// </summary>
+        [HttpGet("getById/{agentId}")]
+        public IActionResult GetAgentById([FromRoute] int agentId)
+        {
+            _logger.LogTrace($"Query for agent info for Agent: {agentId}");
+
+            var response = _agentsRepository.GetAgentById(agentId);
+            return Ok(response);
         }
     }
 }

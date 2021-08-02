@@ -23,10 +23,16 @@ namespace MetricsCommon.SQL_Settings
         Value,
         Time
     }
+    public enum RegisteredAgentsFields
+    {
+        AgentId,
+        AgentUrl
+    }
 
     public class SqlSettings : ISqlSettings
     {
         private static readonly string _connectionString = @"Data Source=metrics.db; Version=3;";
+        private static readonly string _agentsTable = "registeredagents";
 
         private readonly Dictionary<Tables, string> _tablesDb = new()
         {
@@ -49,13 +55,22 @@ namespace MetricsCommon.SQL_Settings
             { ManagerFields.Time, "Time" },
             { ManagerFields.Value, "Value" },
         };
+        private readonly Dictionary<RegisteredAgentsFields, string> _registeredAgentsFields = new()
+        {
+            { RegisteredAgentsFields.AgentId, "AgentId" },
+            { RegisteredAgentsFields.AgentUrl, "AgentUrl" },
+        };
 
         public static string ConnectionString => _connectionString;
+
+        public static string AgentsTable => _agentsTable;
 
         public string this[Tables key] => _tablesDb[key];
 
         public string this[AgentFields key] => _agentFields[key];
 
         public string this[ManagerFields key] => _managerFields[key];
+
+        public string this[RegisteredAgentsFields key] => _registeredAgentsFields[key];
     }
 }

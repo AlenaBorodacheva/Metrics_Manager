@@ -5,5 +5,6 @@
         public string this[Tables key] { get; }
         public string this[AgentFields key] { get; }
         public string this[ManagerFields key] { get; }
+        public string this[RegisteredAgentsFields key] { get; }
     }
 }
